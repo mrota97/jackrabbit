@@ -1,11 +1,32 @@
-jackrabbit:
-  image: node
-  working_dir: /code
-  volumes:
-    - .:/code
-  links:
-    - rabbit
-  environment:
-    RABBIT_URL: 'amqp://rabbit'
-rabbit:
-  image: rabbitmq
+services:
+  jackrabbit:
+    image: node:24
+    working_dir: /code
+    volumes:
+      - .:/code
+      - /code/node_modules
+    environment:
+      RABBIT_URL: 'amqp://rabbit'
+    depends_on:
+      rabbit:
+        condition: service_healthy
+    command: sh -c "npm install && npm test"
+    networks:
+      - rabbitmq-network
+
+  rabbit:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rabbitmq-network
+
+networks:
+  rabbitmq-network:
+    driver: bridge

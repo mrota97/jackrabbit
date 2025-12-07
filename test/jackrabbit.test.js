@@ -1,21 +1,25 @@
-var assert = require("chai").assert;
-var jackrabbit = require("../lib/jackrabbit");
+import { describe, it, expect, beforeAll } from "vitest";
+import { promisify } from "node:util";
+import jackrabbit from "../lib/jackrabbit.js";
 
 describe("jackrabbit", function() {
   describe("constructor", function() {
     describe("with a valid server url", function() {
-      it('emits a "connected" event', function(done) {
-        this.r = jackrabbit(process.env.RABBIT_URL);
-        this.r.once("connected", done);
+      let r;
+      it('emits a "connected" event', async function() {
+        await promisify((done) => {
+          r = jackrabbit(process.env.RABBIT_URL);
+          r.once("connected", done);
+        })();
       });
       it("references a Connection object", function() {
-        var c = this.r.getInternals().connection;
-        assert.ok(c.connection.stream.writable);
+        var c = r.getInternals().connection;
+        expect(c.connection.stream.writable).toBeTruthy();
       });
     });
     describe("without a server url", function() {
       it('throws a "url required" error', function() {
-        assert.throws(jackrabbit, "url required");
+        expect(() => jackrabbit()).toThrow("url required");
       });
     });
     // describe('with an invalid url', function() {
@@ -31,144 +35,160 @@ describe("jackrabbit", function() {
 
   describe("#default", function() {
     describe('without a "name" argument', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.default();
+        e = r.default();
       });
       it("returns a direct, nameless exchange", function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "direct");
-        assert.equal(this.e.name, "");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("direct");
+        expect(e.name).toBe("");
       });
     });
     describe('with a "name" argument', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.default("foobar");
+        e = r.default("foobar");
       });
       it("returns a direct, nameless exchange", function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "direct");
-        assert.equal(this.e.name, "");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("direct");
+        expect(e.name).toBe("");
       });
     });
     describe("before connection is established", function() {
-      it("passes the connection to the exchange", function(done) {
-        jackrabbit(process.env.RABBIT_URL)
-          .default()
-          .once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => {
+          jackrabbit(process.env.RABBIT_URL)
+            .default()
+            .once("connected", done);
+        })();
       });
     });
     describe("after connection is established", function() {
-      before(function(done) {
-        this.r = jackrabbit(process.env.RABBIT_URL);
-        this.r.once("connected", done);
+      let r;
+      beforeAll(async function() {
+        r = jackrabbit(process.env.RABBIT_URL);
+        await promisify((done) => r.once("connected", done))();
       });
-      it("passes the connection to the exchange", function(done) {
-        this.r.default().once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => r.default().once("connected", done))();
       });
     });
   });
 
   describe("#direct", function() {
     describe('without a "name" argument', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.direct();
+        e = r.direct();
       });
       it('returns the direct exchange named "amq.direct"', function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "direct");
-        assert.equal(this.e.name, "amq.direct");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("direct");
+        expect(e.name).toBe("amq.direct");
       });
     });
     describe('with a "name" argument of "foobar.direct"', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.direct("foobar.direct");
+        e = r.direct("foobar.direct");
       });
       it('returns a direct exchange named "foobar.direct"', function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "direct");
-        assert.equal(this.e.name, "foobar.direct");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("direct");
+        expect(e.name).toBe("foobar.direct");
       });
     });
     describe("before connection is established", function() {
-      it("passes the connection to the exchange", function(done) {
-        jackrabbit(process.env.RABBIT_URL)
-          .direct()
-          .once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => {
+          jackrabbit(process.env.RABBIT_URL)
+            .direct()
+            .once("connected", done);
+        })();
       });
     });
     describe("after connection is established", function() {
-      before(function(done) {
-        this.r = jackrabbit(process.env.RABBIT_URL);
-        this.r.once("connected", done);
+      let r;
+      beforeAll(async function() {
+        r = jackrabbit(process.env.RABBIT_URL);
+        await promisify((done) => r.once("connected", done))();
       });
-      it("passes the connection to the exchange", function(done) {
-        this.r.direct().once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => r.direct().once("connected", done))();
       });
     });
   });
 
   describe("#fanout", function() {
     describe('without a "name" argument', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.fanout();
+        e = r.fanout();
       });
       it('returns the direct exchange named "amq.fanout"', function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "fanout");
-        assert.equal(this.e.name, "amq.fanout");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("fanout");
+        expect(e.name).toBe("amq.fanout");
       });
     });
     describe('with a "name" argument of "foobar.fanout"', function() {
-      before(function() {
+      let e;
+      beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
-        this.e = r.fanout("foobar.fanout");
+        e = r.fanout("foobar.fanout");
       });
       it('returns a direct exchange named "foobar.fanout"', function() {
-        assert.ok(this.e.queue);
-        assert.ok(this.e.publish);
-        assert.equal(this.e.type, "fanout");
-        assert.equal(this.e.name, "foobar.fanout");
+        expect(e.queue).toBeTruthy();
+        expect(e.publish).toBeTruthy();
+        expect(e.type).toBe("fanout");
+        expect(e.name).toBe("foobar.fanout");
       });
     });
     describe("before connection is established", function() {
-      it("passes the connection to the exchange", function(done) {
-        jackrabbit(process.env.RABBIT_URL)
-          .fanout()
-          .once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => {
+          jackrabbit(process.env.RABBIT_URL)
+            .fanout()
+            .once("connected", done);
+        })();
       });
     });
     describe("after connection is established", function() {
-      before(function(done) {
-        this.r = jackrabbit(process.env.RABBIT_URL);
-        this.r.once("connected", done);
+      let r;
+      beforeAll(async function() {
+        r = jackrabbit(process.env.RABBIT_URL);
+        await promisify((done) => r.once("connected", done))();
       });
-      it("passes the connection to the exchange", function(done) {
-        this.r.fanout().once("connected", done);
+      it("passes the connection to the exchange", async function() {
+        await promisify((done) => r.fanout().once("connected", done))();
       });
     });
   });
 
   describe("#close", function() {
-    before(function(done) {
-      this.r = jackrabbit(process.env.RABBIT_URL);
-      this.r.once("connected", done);
+    let r;
+    beforeAll(async function() {
+      r = jackrabbit(process.env.RABBIT_URL);
+      await promisify((done) => r.once("connected", done))();
     });
-    it('emits a "close" event', function(done) {
-      this.r.close();
-      this.r.once("close", done);
+    it('emits a "close" event', async function() {
+      r.close();
+      await promisify((done) => r.once("close", done))();
     });
     it("clears the connection", function() {
-      assert.ok(!this.r.getInternals().connection);
+      expect(r.getInternals().connection).toBeFalsy();
     });
   });
 });

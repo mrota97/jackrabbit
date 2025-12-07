@@ -1,112 +1,127 @@
-var assert = require("chai").assert;
-var amqp = require("amqplib/callback_api");
-var uuid = require("uuid");
-var exchange = require("../lib/exchange");
-var queue = require("../lib/queue");
+import { describe, it, expect, beforeAll } from "vitest";
+import { promisify } from "node:util";
+import amqp from "amqplib/callback_api";
+import { v4 as uuid } from "uuid";
+import exchange from "../lib/exchange.js";
+import queue from "../lib/queue.js";
 
 describe("queue", function() {
   describe("consume", function() {
-    before(createConnection);
-
-    before(function() {
-      this.name = `test.queue.consume.${uuid.v4()}`;
-      this.exchange = exchange("", "direct");
-      this.exchange.connect(this.connection);
-      this.queue = queue({ name: this.name });
-      this.queue.connect(this.connection);
+    let connection, name, _exchange, _queue;
+    beforeAll(async function() {
+      connection = await createConnection();
     });
 
-    it("calls the message handler when a message arrives", function(done) {
-      var message = uuid.v4();
+    beforeAll(function() {
+      name = `test.queue.consume.${uuid()}`;
+      _exchange = exchange("", "direct");
+      _exchange.connect(connection);
+      _queue = queue({ name: name });
+      _queue.connect(connection);
+    });
+
+    it("calls the message handler when a message arrives", async function() {
+      var message = uuid();
       var n = 3;
       var received = 0;
 
-      this.queue.consume(onMessage, { noAck: true });
-
-      for (var i = 0; i < n; i++) {
-        this.exchange.publish(message, { key: this.name });
-      }
-
-      function onMessage(data, ack, nack, msg) {
-        assert.equal(data, message);
-        received++;
-        if (received === n) done();
-      }
+      await promisify((done) => {
+        _queue.consume(onMessage, { noAck: true });
+  
+        for (var i = 0; i < n; i++) {
+          _exchange.publish(message, { key: name });
+        }
+  
+        function onMessage(data, ack, nack, msg) {
+          expect(data).toBe(message);
+          received++;
+          if (received === n) done();
+        }
+      })();
     });
   });
 
   describe("cancel", function() {
-    before(createConnection);
-
-    before(function() {
-      this.name = `test.queue.cancel.${uuid.v4()}`;
-      this.exchange = exchange("", "direct");
-      this.exchange.connect(this.connection);
-      this.queue = queue({ name: this.name });
-      this.queue.connect(this.connection);
+    let connection, name, _exchange, _queue;
+    beforeAll(async function() {
+      connection = await createConnection();
     });
 
-    it("initially consumes messages", function(done) {
-      var message = uuid.v4();
-
-      this.queue.consume(onMessage, { noAck: true });
-      this.exchange.publish(message, { key: this.name });
-
-      function onMessage(data, ack, nack, msg) {
-        assert.equal(data, message);
-        done();
-      }
+    beforeAll(function() {
+      name = `test.queue.cancel.${uuid()}`;
+      _exchange = exchange("", "direct");
+      _exchange.connect(connection);
+      _queue = queue({ name: name });
+      _queue.connect(connection);
     });
 
-    it("calls back with ok", function(done) {
-      this.queue.cancel(done);
+    it("initially consumes messages", async function() {
+      var message = uuid();
+
+      await promisify((done) => {
+        _queue.consume(onMessage, { noAck: true });
+        _exchange.publish(message, { key: name });
+  
+        function onMessage(data, ack, nack, msg) {
+          expect(data).toBe(message);
+          done();
+        }
+      })();
     });
 
-    it("stops consuming after cancel", function(done) {
-      this.exchange.publish("should not consume", {
-        key: this.name,
+    it("calls back with ok", async function() {
+      await promisify(_queue.cancel)();
+    });
+
+    it("stops consuming after cancel", async function() {
+      _exchange.publish("should not consume", {
+        key: name,
         noAck: true
       });
 
-      setTimeout(done, 250);
+      await new Promise((resolve) => setTimeout(resolve, 250));
     });
   });
 
   describe("purge", function() {
-    before(createConnection);
-
-    before(function() {
-      this.name = `test.queue.purge.${uuid.v4()}`;
-      this.exchange = exchange("", "direct");
-      this.exchange.connect(this.connection);
-      this.queue = queue({ name: this.name });
-      this.queue.connect(this.connection);
+    let connection, name, _exchange, _queue;
+    beforeAll(async function() {
+      connection = await createConnection();
     });
 
-    before(function(done) {
+    beforeAll(function() {
+      name = `test.queue.purge.${uuid()}`;
+      _exchange = exchange("", "direct");
+      _exchange.connect(connection);
+      _queue = queue({ name: name });
+      _queue.connect(connection);
+    });
+
+    beforeAll(async function() {
       var n = 10;
       while (n--) {
-        this.exchange.publish("test", { key: this.name });
+        _exchange.publish("test", { key: name });
       }
-      setTimeout(done, 100);
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    it("returns the number of messages purged", function(done) {
-      this.queue.purge(function(err, count) {
-        assert.ok(count > 5);
-        done(err);
-      });
+    it("returns the number of messages purged", async function() {
+      const count = await promisify(_queue.purge)();
+      expect(count).toBeGreaterThan(5);
     });
   });
 });
 
-function createConnection(done) {
-  amqp.connect(
+/**
+ * 
+ * @returns {Promise<amqp.Connection>}
+ */
+async function createConnection() {
+  return await promisify((done) => amqp.connect(
     process.env.RABBIT_URL,
     function(err, conn) {
-      assert.ok(!err);
-      this.connection = conn;
-      done();
-    }.bind(this)
-  );
+      expect(err).toBeFalsy();
+      done(null, conn);
+    }
+  ))();
 }
