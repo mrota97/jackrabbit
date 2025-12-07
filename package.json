@@ -32,9 +32,14 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/lodash": "^4.17.21",
+    "@types/node": "^24.10.1",
+    "@types/uuid": "^10.0.0",
     "prettier": "1.13.7",
     "prettier-eslint-cli": "^4.7.1",
     "release-it": "^7.4.7",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.15"
   }
 }
