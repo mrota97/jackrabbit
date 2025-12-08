@@ -1,8 +1,17 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { promisify } from "node:util";
 import amqp from "amqplib/callback_api";
-import exchange from "../lib/exchange.js";
+import exchange, { Exchange } from "../src/exchange.js";
 import { v4 as uuid } from "uuid";
+import { Queue } from "../src/queue.js";
+
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            RABBIT_URL: string;
+        }
+    }
+}
 
 describe("exchange", function() {
   describe("constructor", function() {
@@ -40,6 +49,7 @@ describe("exchange", function() {
 
       describe("and no type", function() {
         it("throws an error", function() {
+          // @ts-ignore
           expect(() => exchange(undefined, undefined)).toThrow("missing exchange type");
         });
       });
@@ -47,32 +57,32 @@ describe("exchange", function() {
   });
 
   describe("#connect", function() {
-    let connection;
+    let connection: amqp.Connection;
     beforeAll(async function() {
-      connection = await promisify((done) => {
+      connection = await new Promise<amqp.Connection>((resolve) => {
         amqp.connect(
           process.env.RABBIT_URL,
           function(err, conn) {
             expect(err).toBeFalsy();
-            done(null, conn);
+            resolve(conn);
           }
         );
-      })();
+      });
     });
     it('emits a "connected" event', async function() {
-      await promisify((done) => {
+      await new Promise<void>((resolve) => {
         exchange("", "direct")
           .connect(connection)
-          .once("connected", done);
-      })();
+          .once("connected", resolve);
+      });
     });
   });
 
   describe("#queue", function() {
     describe("with no options", function() {
-      let connection;
+      let connection: amqp.Connection;
       beforeAll(async function() {
-        connection = await promisify((done) => {
+        connection = await promisify<amqp.Connection>((done) => {
           amqp.connect(
             process.env.RABBIT_URL,
             function(err, conn) {
@@ -82,7 +92,7 @@ describe("exchange", function() {
           );
         })();
       });
-      let q;
+      let q: Queue;
       beforeAll(function() {
         q = exchange("", "direct")
           .connect(connection)
@@ -94,22 +104,22 @@ describe("exchange", function() {
     });
 
     describe("with key bindings", async function() {
-      let _exchange;
+      let _exchange: Exchange;
       beforeAll(async function() {
-        const connection = await promisify((done) => {
+        const connection = await new Promise<amqp.Connection>((resolve) => {
           amqp.connect(
             process.env.RABBIT_URL,
             function(err, conn) {
               expect(err).toBeFalsy();
-              done(null, conn);
+              resolve(conn);
             }
           );
-        })();
+        });
 
         _exchange = exchange("test.topic.bindings", "topic").connect(connection);
-        await promisify((done) => {
-          _exchange.once("connected", done);
-        })();
+        await new Promise<void>((resolve) => {
+          _exchange.once("connected", resolve);
+        });
       });
 
       it('emits a "bound" event when all routing keys have been bound to the queue', async function() {
@@ -118,12 +128,12 @@ describe("exchange", function() {
         var queue = _exchange.queue({ keys: keys });
         var message = uuid();
 
-        await promisify((done) => {
+        await new Promise<void>((resolve) => {
           queue.consume(function(data, ack, nack, msg) {
             expect(data).toBe(message);
             expect(msg.fields.routingKey).toBe(finalKey);
             ack();
-            done();
+            resolve();
           });
   
           queue.once(
@@ -132,7 +142,7 @@ describe("exchange", function() {
               _exchange.publish(message, { key: finalKey });
             }
           );
-        })();
+        });
       });
     });
   });

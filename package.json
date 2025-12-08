@@ -15,7 +15,7 @@
   "repository": "hunterloftis/jackrabbit",
   "homepage": "https://github.com/hunterloftis/jackrabbit",
   "bugs": "https://github.com/hunterloftis/jackrabbit/issues",
-  "main": "lib/jackrabbit.js",
+  "type": "module",
   "scripts": {
     "test": "vitest run",
     "test-format": "./node_modules/prettier-eslint-cli/dist/index.js lib/**/*.js test/**/*.js --list-different",

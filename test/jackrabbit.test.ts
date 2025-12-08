@@ -1,16 +1,25 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { promisify } from "node:util";
-import jackrabbit from "../lib/jackrabbit.js";
+import jackrabbit, { Jackrabbit } from "../src/jackrabbit.js";
+import { Exchange } from "../src/exchange.js";
+
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            RABBIT_URL: string;
+        }
+    }
+}
 
 describe("jackrabbit", function() {
   describe("constructor", function() {
     describe("with a valid server url", function() {
-      let r;
+      let r: Jackrabbit;
       it('emits a "connected" event', async function() {
-        await promisify((done) => {
+        await new Promise<void>((resolve) => {
           r = jackrabbit(process.env.RABBIT_URL);
-          r.once("connected", done);
-        })();
+          r.once("connected", resolve);
+        });
       });
       it("references a Connection object", function() {
         var c = r.getInternals().connection;
@@ -19,6 +28,7 @@ describe("jackrabbit", function() {
     });
     describe("without a server url", function() {
       it('throws a "url required" error', function() {
+        // @ts-ignore
         expect(() => jackrabbit()).toThrow("url required");
       });
     });
@@ -35,7 +45,7 @@ describe("jackrabbit", function() {
 
   describe("#default", function() {
     describe('without a "name" argument', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.default();
@@ -48,7 +58,7 @@ describe("jackrabbit", function() {
       });
     });
     describe('with a "name" argument', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.default("foobar");
@@ -62,28 +72,28 @@ describe("jackrabbit", function() {
     });
     describe("before connection is established", function() {
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => {
+        await new Promise<void>((resolve) => {
           jackrabbit(process.env.RABBIT_URL)
             .default()
-            .once("connected", done);
-        })();
+            .once("connected", resolve);
+        });
       });
     });
     describe("after connection is established", function() {
-      let r;
+      let r: Jackrabbit;
       beforeAll(async function() {
         r = jackrabbit(process.env.RABBIT_URL);
-        await promisify((done) => r.once("connected", done))();
+        await new Promise<void>((resolve) => r.once("connected", resolve));
       });
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => r.default().once("connected", done))();
+        await new Promise<void>((resolve) => r.default().once("connected", resolve));
       });
     });
   });
 
   describe("#direct", function() {
     describe('without a "name" argument', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.direct();
@@ -96,7 +106,7 @@ describe("jackrabbit", function() {
       });
     });
     describe('with a "name" argument of "foobar.direct"', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.direct("foobar.direct");
@@ -110,28 +120,28 @@ describe("jackrabbit", function() {
     });
     describe("before connection is established", function() {
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => {
+        await new Promise<void>((resolve) => {
           jackrabbit(process.env.RABBIT_URL)
             .direct()
-            .once("connected", done);
-        })();
+            .once("connected", resolve);
+        });
       });
     });
     describe("after connection is established", function() {
-      let r;
+      let r: Jackrabbit;
       beforeAll(async function() {
         r = jackrabbit(process.env.RABBIT_URL);
-        await promisify((done) => r.once("connected", done))();
+        await new Promise<void>((resolve) => r.once("connected", resolve));
       });
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => r.direct().once("connected", done))();
+        await new Promise<void>((resolve) => r.direct().once("connected", resolve));
       });
     });
   });
 
   describe("#fanout", function() {
     describe('without a "name" argument', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.fanout();
@@ -144,7 +154,7 @@ describe("jackrabbit", function() {
       });
     });
     describe('with a "name" argument of "foobar.fanout"', function() {
-      let e;
+      let e: Exchange;
       beforeAll(function() {
         var r = jackrabbit(process.env.RABBIT_URL);
         e = r.fanout("foobar.fanout");
@@ -158,36 +168,36 @@ describe("jackrabbit", function() {
     });
     describe("before connection is established", function() {
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => {
+        await new Promise<void>((resolve) => {
           jackrabbit(process.env.RABBIT_URL)
             .fanout()
-            .once("connected", done);
-        })();
+            .once("connected", resolve);
+        });
       });
     });
     describe("after connection is established", function() {
-      let r;
+      let r: Jackrabbit;
       beforeAll(async function() {
         r = jackrabbit(process.env.RABBIT_URL);
-        await promisify((done) => r.once("connected", done))();
+        await new Promise<void>((resolve) => r.once("connected", resolve));
       });
       it("passes the connection to the exchange", async function() {
-        await promisify((done) => r.fanout().once("connected", done))();
+        await new Promise<void>((resolve) => r.fanout().once("connected", resolve));
       });
     });
   });
 
   describe("#close", function() {
-    let r;
+    let r: Jackrabbit;
     beforeAll(async function() {
       r = jackrabbit(process.env.RABBIT_URL);
-      await promisify((done) => r.once("connected", done))();
+      await new Promise<void>((resolve) => r.once("connected", resolve));
     });
-    it('emits a "close" event', async function() {
+    it('emits a "close" event, which clears the connection', async function() {
       r.close();
-      await promisify((done) => r.once("close", done))();
+      await new Promise<void>((resolve) => r.once("close", resolve));
     });
-    it("clears the connection", function() {
+    it("clears the connection", async function() {
       expect(r.getInternals().connection).toBeFalsy();
     });
   });

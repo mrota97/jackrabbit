@@ -1,15 +1,15 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
-  "include": ["./lib/**/*.js"],
+  "include": ["./src/**/*.ts"],
   "compilerOptions": {
     // File Layout
-    "rootDir": "./lib",
+    "rootDir": "./src",
     "outDir": "./dist",
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    // "module": "nodenext",
-    // "target": "esnext",
+    "module": "node16",
+    "target": "esnext",
     // "types": [],
     // For nodejs:
     "lib": ["esnext"],
@@ -20,8 +20,6 @@
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "checkJs": true,
-    "allowJs": true,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
@@ -42,6 +40,6 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   }
 }
