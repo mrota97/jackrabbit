@@ -32,6 +32,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "@tsconfig/node-lts": "^24.0.0",
     "@types/amqplib": "^0.10.8",
     "@types/lodash": "^4.17.21",
     "@types/node": "^24.10.1",

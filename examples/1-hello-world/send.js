@@ -1,4 +1,4 @@
-var jackrabbit = require("../..");
+import jackrabbit from "../../src/jackrabbit.ts";
 
 var rabbit = jackrabbit(process.env.RABBIT_URL);
 var exchange = rabbit.default();
